@@ -47,13 +47,13 @@ def get_price(pagesource):
         cabins = child.find(class_='cab-0')
         price = cabins.find(class_='price')
         if price:
-            temp['price'] = price.text
+            temp['price'] = price.find_next().text
         else:
             temp['price'] = None
         t_head['price_list'].append(temp)
     # data_list.append(t_head)
     # return data_list
-    json_data = json.dumps(t_head, ensure_ascii=False, encoding = 'utf8', indent=4, sort_keys=True) + ','
+    json_data = json.dumps(t_head, ensure_ascii=False, encoding = 'utf8', indent=4, sort_keys=True)
     return json_data
 
 #CAN-KIX
@@ -72,7 +72,7 @@ if pagesource:
     if price: 
         print "Got the price..."
         check_time = datetime.datetime.strftime(datetime.datetime.now(), \
-            "%Y-%m-%d-%H:%m")
+            "%Y-%m-%d-%H:%M")
         with open("{}.json".format(check_time), "w") as f:
         # try:
         #     old_price = json.loads(f)
