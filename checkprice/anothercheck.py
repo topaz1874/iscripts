@@ -7,7 +7,8 @@ from bs4 import BeautifulSoup
 import os
 import datetime
 import json
-# import sys
+import schedule
+import time
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -42,7 +43,7 @@ def get_price(pagesource):
 
     for child in trip_list.children:
         temp = {}
-        temp['intro'] = child.find(class_='sh-intro').text
+        temp['intro'] = ' '.join(child.find(class_='sh-intro').stripped_strings)
         # intro = child.find(class_='sh-intro').text
         cabins = child.find(class_='cab-0')
         price = cabins.find(class_='price')
@@ -53,7 +54,7 @@ def get_price(pagesource):
         t_head['price_list'].append(temp)
     # data_list.append(t_head)
     # return data_list
-    json_data = json.dumps(t_head, ensure_ascii=False, encoding = 'utf8', indent=4, sort_keys=True)
+    json_data = json.dumps(t_head, ensure_ascii=False, indent=4, sort_keys=True)
     return json_data
 
 #CAN-KIX
@@ -63,31 +64,27 @@ url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-20171
 
 # url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=0&p=100&t=CAN-NYC-20171007&egs=ITA,ITA"
 
-pagesource = get_pagesource(url)
-# price =  get_price(pagesource)
+def main():
+    pagesource = get_pagesource(url)
 
-if pagesource:
-    # trip_prices_list.add(get_price(pagesource))
-    price =  get_price(pagesource)
-    if price: 
-        print "Got the price..."
+    if pagesource:
+        price =  get_price(pagesource)
         check_time = datetime.datetime.strftime(datetime.datetime.now(), \
-            "%Y-%m-%d-%H:%M")
+                "%Y-%m-%d-%H:%M")
         with open("{}.json".format(check_time), "w") as f:
-        # try:
-        #     old_price = json.loads(f)
-        #     price.append(old_price)
-        # except Exception:
-        #     print Exception
-        #     pass 
-        # writeJSON = json.dumps(price,  indent=4, separators=(',', ': '))
-        # f.write(writeJSON)
-            f.write(price.encode('utf8'))
-            print "Done!"
-    else:
-        print "Cannot get the price something's wrong, retry later."
+            if price: 
+                print "On {} got the price...".format(check_time)
+                f.write(price.encode('utf8'))
+                print "Done!"
+            else:
+                error_msg = "Cannot get the price something's wrong, retry later."
+                f.write(error_msg)
+                print error_msg
 
-
+schedule.every(1).minutes.do(main)
+while True:
+    schedule.run_pending()
+    time.sleep(1)
 
 
 
