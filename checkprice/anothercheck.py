@@ -9,6 +9,7 @@ import datetime
 import json
 import schedule
 import time
+import re
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +59,7 @@ def get_price(pagesource):
     return json_data
 
 #CAN-KIX
-url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-20171007-20171015&egs=ITA,ITA"
+url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-2010507-20171015&egs=ITA,ITA"
 
 #CAN-NYC
 
@@ -66,11 +67,16 @@ url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-20171
 
 def main():
     pagesource = get_pagesource(url)
-
+    # pattern = r'.+(?P<go_date>\d{8})-(?P<back_date>\d{8})'
+    # m = re.match(pattern, url)
+    # go_datetime = datetime.datetime.strptime(m.group('go_date'), '%Y%m%d')
+    # today = datetime.date.today()
+    # time_diff = go_datetime -  today > datetime.timedelta(days=1)
     if pagesource:
         price =  get_price(pagesource)
         check_time = datetime.datetime.strftime(datetime.datetime.now(), \
                 "%Y-%m-%d-%H:%M")
+        
         with open("{}.json".format(check_time), "w") as f:
             if price: 
                 print "On {} got the price...".format(check_time)
