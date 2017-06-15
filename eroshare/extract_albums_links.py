@@ -29,7 +29,10 @@ def get_albums_links(soup):
     return album_links
 
 def get_next_page(soup):
-    next_page = soup.find(class_='pagination').find('a', attrs={'rel':'next'})
+    next_page = None
+    pagination = soup.find(class_='pagination')
+    if pagination:
+        next_page = pagination.find('a', attrs={'rel':'next'})
 
     if next_page:
         next_page = 'https://eroshare.com'+ next_page['href']
