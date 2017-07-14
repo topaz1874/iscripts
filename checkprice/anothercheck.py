@@ -55,16 +55,22 @@ def get_price(pagesource):
         t_head['price_list'].append(temp)
     # data_list.append(t_head)
     # return data_list
-    json_data = json.dumps(t_head, ensure_ascii=False, indent=4, sort_keys=True)
-    return json_data
+
+    # json_data = json.dumps(t_head, ensure_ascii=False, indent=4, sort_keys=True)
+    # return json_data
+    return t_head
 
 #CAN-KIX
-url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-2010507-20171015&egs=ITA,ITA"
-
+url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-20171007-20171015&egs=ITA,ITA"
 #CAN-NYC
 
-# url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=0&p=100&t=CAN-NYC-20171007&egs=ITA,ITA"
+# url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=302&t=CAN-SYD-20170903-20170907&egs=ITA,ITA"
 
+## todo list:
+# if the check date in url smaller then current time should be abort first
+# in schedule  process, price checked first before write to json file
+# every day write one file at least
+# push email if price changed
 def main():
     pagesource = get_pagesource(url)
     # pattern = r'.+(?P<go_date>\d{8})-(?P<back_date>\d{8})'
@@ -76,21 +82,43 @@ def main():
         price =  get_price(pagesource)
         check_time = datetime.datetime.strftime(datetime.datetime.now(), \
                 "%Y-%m-%d-%H:%M")
-        
-        with open("{}.json".format(check_time), "w") as f:
-            if price: 
-                print "On {} got the price...".format(check_time)
-                f.write(price.encode('utf8'))
-                print "Done!"
-            else:
-                error_msg = "Cannot get the price something's wrong, retry later."
-                f.write(error_msg)
-                print error_msg
 
-schedule.every(1).minutes.do(main)
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+        # with open("{}.json".format(check_time), "w") as f:
+        #     if price: 
+        #         print "On {} got the price...".format(check_time)
+        #         f.write(price.encode('utf8'))
+        #         print "Done!"
+        #     else:
+        #         error_msg = "Cannot get the price something's wrong, retry later."
+        #         f.write(error_msg)
+        #         print error_msg
+        json_path = os.path.join(os.getcwd(), 'json.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as g:
+                price_lst = json.load(g)
+                price_lst.append({'check_time':check_time, 'price':price})
+            with open(json_path, 'w') as f:   
+                f.write(json.dumps(price_lst, \
+                ensure_ascii=False, indent=4, sort_keys=True).encode('utf8'))
 
+        else:
+            with open("json.json", "w") as g:
+                g.write(json.dumps(
+                    [{'check_time': check_time, 'price': price},], \
+                    ensure_ascii=False, indent=4, sort_keys=True).encode('utf8'))
+
+if __name__ == '__main__':
+    main()
+
+# schedule.every().day.at("10:05").do(main)
+# while True:
+#     schedule.run_pending()
+#     time.sleep(1)
+
+# class SaveClass(object):
+#     def save_json(self):
+#         with open(self.json_path, 'w') as g:
+#             g.write(json.dumps(
+#                 {'offset': self.offset}, indent=4, sort_keys=True))
 
 
