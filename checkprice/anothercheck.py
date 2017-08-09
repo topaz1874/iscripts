@@ -9,10 +9,55 @@ import datetime
 import json
 import schedule
 import time
-import re
+import logging
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+#CAN-KIX
+url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-201710107-20171015&egs=ITA,ITA"
+#CAN-NYC
+
+# url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=302&t=CAN-SYD-20170903-20170907&egs=ITA,ITA"
+
+LOG_FORMAT = "%(levelname)s %(asctime)s - %(message)s"
+logging.basicConfig(filename='log.log', filemode='w',
+    level=logging.DEBUG, format=LOG_FORMAT)
+
+logger = logging.getLogger()
+
+## todo list:
+# if the check date in url smaller then current time should be abort first
+# in schedule  process, price checked first before write to json file
+# every day write one file at least
+# push email if price changed
+def main():
+    pagesource = get_pagesource(url)
+    # pattern = r'.+(?P<go_date>\d{8})-(?P<back_date>\d{8})'
+    # m = re.match(pattern, url)
+    # go_datetime = datetime.datetime.strptime(m.group('go_date'), '%Y%m%d')
+    # today = datetime.date.today()
+    # time_diff = go_datetime -  today > datetime.timedelta(days=1)
+    if pagesource:
+        price =  get_price(pagesource)
+        logger.info('got the price!')
+        check_time = datetime.datetime.strftime(datetime.datetime.now(), \
+                "%Y-%m-%d-%H:%M")
+        json_path = os.path.join(os.getcwd(), 'json.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as g:
+                price_lst = json.load(g)
+                price_lst.append({'check_time':check_time, 'price':price})
+            with open(json_path, 'w') as f:   
+                f.write(json.dumps(price_lst, \
+                ensure_ascii=False, indent=4, sort_keys=True).encode('utf8'))
+
+        else:
+            with open("json.json", "w") as g:
+                g.write(json.dumps(
+                    [{'check_time': check_time, 'price': price},], \
+                    ensure_ascii=False, indent=4, sort_keys=True).encode('utf8'))
+
 def get_pagesource(url):
     pagesource = None
     # driver = webdriver.Chrome(executable_path=os.path.join(BASE_DIR, 'chromedriver/chromedriver'))
@@ -24,10 +69,15 @@ def get_pagesource(url):
             EC.presence_of_element_located((By.ID, "sh-trip-item-0-0"))
         )
         pagesource = driver.page_source
-        print "Got page soure..."
+        logger.info('pagesource got!')
+    except Exception:
+        driver.save_screenshot('screenshot.png')
     finally:
         driver.quit()
+
     return pagesource
+
+
 
 def get_price(pagesource):
     bsObj = BeautifulSoup(pagesource, 'html.parser') 
@@ -60,65 +110,12 @@ def get_price(pagesource):
     # return json_data
     return t_head
 
-#CAN-KIX
-url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=200&t=CAN-KIX-20171007-20171015&egs=ITA,ITA"
-#CAN-NYC
-
-# url = "http://b2c.csair.com/ita/intl/zh/flights?flex=1&m=1&p=302&t=CAN-SYD-20170903-20170907&egs=ITA,ITA"
-
-## todo list:
-# if the check date in url smaller then current time should be abort first
-# in schedule  process, price checked first before write to json file
-# every day write one file at least
-# push email if price changed
-def main():
-    pagesource = get_pagesource(url)
-    # pattern = r'.+(?P<go_date>\d{8})-(?P<back_date>\d{8})'
-    # m = re.match(pattern, url)
-    # go_datetime = datetime.datetime.strptime(m.group('go_date'), '%Y%m%d')
-    # today = datetime.date.today()
-    # time_diff = go_datetime -  today > datetime.timedelta(days=1)
-    if pagesource:
-        price =  get_price(pagesource)
-        check_time = datetime.datetime.strftime(datetime.datetime.now(), \
-                "%Y-%m-%d-%H:%M")
-
-        # with open("{}.json".format(check_time), "w") as f:
-        #     if price: 
-        #         print "On {} got the price...".format(check_time)
-        #         f.write(price.encode('utf8'))
-        #         print "Done!"
-        #     else:
-        #         error_msg = "Cannot get the price something's wrong, retry later."
-        #         f.write(error_msg)
-        #         print error_msg
-        json_path = os.path.join(os.getcwd(), 'json.json')
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as g:
-                price_lst = json.load(g)
-                price_lst.append({'check_time':check_time, 'price':price})
-            with open(json_path, 'w') as f:   
-                f.write(json.dumps(price_lst, \
-                ensure_ascii=False, indent=4, sort_keys=True).encode('utf8'))
-
-        else:
-            with open("json.json", "w") as g:
-                g.write(json.dumps(
-                    [{'check_time': check_time, 'price': price},], \
-                    ensure_ascii=False, indent=4, sort_keys=True).encode('utf8'))
-
 if __name__ == '__main__':
     main()
+    schedule.every().day.at("10:05").do(main)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
-# schedule.every().day.at("10:05").do(main)
-# while True:
-#     schedule.run_pending()
-#     time.sleep(1)
-
-# class SaveClass(object):
-#     def save_json(self):
-#         with open(self.json_path, 'w') as g:
-#             g.write(json.dumps(
-#                 {'offset': self.offset}, indent=4, sort_keys=True))
 
 
